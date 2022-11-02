@@ -1,0 +1,6 @@
+__pycache__/
+results/
+dataset/
+tools/objdet_models/
+*.pyc
+*.pyo
