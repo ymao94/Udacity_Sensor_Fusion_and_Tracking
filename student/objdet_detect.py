@@ -234,31 +234,26 @@ def detect_objects(input_bev_maps, model, configs):
         ## step 2 : loop over all detections
         for det in detections:
             ## step 3 : perform the conversion using the limits for x, y and z set in the configs structure
-            obj_id, obj_y, obj_x, obj_z, obj_h, obj_w, obj_l, obj_yaw = det
-
-            y_diff = configs.lim_y[1] - configs.lim_y[0]
-            x_diff = configs.lim_x[1] - configs.lim_x[0]
-
-            y = (obj_x / configs.bev_height) * x_diff + configs.lim_x[0]
-            x = (obj_y / configs.bev_width) * y_diff + configs.lim_y[0]
-            w = (obj_w / configs.bev_width) * y_diff
-            l = (obj_l / configs.bev_height) * x_diff   
+            score, x, y, z, box_height, box_width, box_length, yaw = det
+            x_range = configs.lim_x[1] - configs.lim_x[0]
+            y_range = configs.lim_y[1] - configs.lim_y[0]
+            x_factor = x_range / configs.bev_height
+            y_factor = y_range / configs.bev_width
+            x_center = float(x_factor * y)
+            y_center = float(y_factor * x - y_range / 2)
+            z = float(z)
+            box_width_2 = float(y_factor * box_width)
+            box_length_2 = float(x_factor * box_length)
+            yaw = float(yaw)
             
+            if (x_center >= configs.lim_x[0]) and (x_center <= configs.lim_x[1]) and \
+                (y_center >= configs.lim_y[0]) and (y_center <= configs.lim_y[1]) and \
+                (z >= configs.lim_z[0]) and (z <= configs.lim_z[1]):
+
+                ## step 4 : append the current object to the 'objects' array
+
+                objects.append([1, x_center, y_center, z, 
+                    box_height, box_width_2, box_length_2, yaw])
                 
-            """
-            x = (_y - configs.lim_y[0]) / (configs.lim_y[1] - configs.lim_y[0]) * configs.bev_width
-            y = (_x - configs.lim_x[0]) / (configs.lim_x[1] - configs.lim_x[0]) * configs.bev_height
-            z = _z - configs.lim_z[0]
-            w = _w / (configs.lim_y[1] - configs.lim_y[0]) * configs.bev_width
-            l = _l / (configs.lim_x[1] - configs.lim_x[0]) * configs.bev_height
-            
-            yaw = -_yaw
-            """
-            ## step 4 : append the current object to the 'objects' array
-            objects.append([obj_id, x, y, obj_z, obj_h, w, l, -obj_yaw])
-        
-    #######
-    ####### ID_S3_EX2 START #######   
-    
     return objects    
 

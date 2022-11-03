@@ -29,7 +29,9 @@ The front/rear bumper are quite stable features.
 
 ![range](img/range_img.png)
 
+Detection results from darknet pretrained model:
 
+![darknet_pretrained](img/stats_darknet.png)
 
 # Writeup: Track 3D-Objects Over Time
 
