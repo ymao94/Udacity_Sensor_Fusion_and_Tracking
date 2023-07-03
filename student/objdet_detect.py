@@ -108,7 +108,7 @@ def load_configs_model(model_name='darknet', configs=None):
         raise ValueError("Error: Invalid model name")
 
     # GPU vs. CPU
-    configs.no_cuda = False # if true, cuda is not used
+    configs.no_cuda = True # if true, cuda is not used
     configs.gpu_idx = 0  # GPU index to use.
     configs.device = torch.device('cpu' if configs.no_cuda else 'cuda:{}'.format(configs.gpu_idx))
     configs.min_iou = 0.5

@@ -27,66 +27,49 @@ class Filter:
         pass
 
     def F(self):
-        ############
-        # TODO Step 1: implement and return system matrix F
-        ############
-
-        return 0
+        F = np.eye(6)
+        F[0, 3] = params.dt
+        F[1, 4] = params.dt
+        F[2, 5] = params.dt
         
-        ############
-        # END student code
-        ############ 
+        return np.matrix(F)
 
     def Q(self):
-        ############
-        # TODO Step 1: implement and return process noise covariance Q
-        ############
-
-        return 0
+        a = 1 / 3 * params.dt ** 3 * params.q
+        b = 1 / 2 * params.dt ** 2 * params.q
+        c = params.dt * params.q
+        return np.matrix([
+            [a, 0, 0, b, 0, 0],
+            [0, a, 0, 0, b, 0],
+            [0, 0, a, 0, 0, b],
+            [b, 0, 0, c, 0, 0],
+            [0, b, 0, 0, c, 0],
+            [0, 0, b, 0, 0, c]
+        ])        
         
-        ############
-        # END student code
-        ############ 
-
     def predict(self, track):
-        ############
-        # TODO Step 1: predict state x and estimation error covariance P to next timestep, save x and P in track
-        ############
-
-        pass
-        
-        ############
-        # END student code
-        ############ 
+        F = self.F()
+        Q = self.Q()
+        x = F * track.x
+        P = F * track.P * F.T + Q
+        track.set_x(x)
+        track.set_P(P)
 
     def update(self, track, meas):
-        ############
-        # TODO Step 1: update state x and covariance P with associated measurement, save x and P in track
-        ############
+        H = meas.sensor.get_H(track.x)
+        S = self.S(track, meas, H)
+        K = track.P * H.T * np.linalg.inv(S)
+        x = track.x + K * self.gamma(track, meas)
+        I = np.eye(6)
+        P = (I - K * H) * track.P
         
-        ############
-        # END student code
-        ############ 
+        track.set_x(x)
+        track.set_P(P)
+        
         track.update_attributes(meas)
     
     def gamma(self, track, meas):
-        ############
-        # TODO Step 1: calculate and return residual gamma
-        ############
-
-        return 0
-        
-        ############
-        # END student code
-        ############ 
+        return meas.z - meas.sensor.get_hx(track.x)
 
     def S(self, track, meas, H):
-        ############
-        # TODO Step 1: calculate and return covariance of residual S
-        ############
-
-        return 0
-        
-        ############
-        # END student code
-        ############ 
+        return H * track.P * H.T + meas.R
