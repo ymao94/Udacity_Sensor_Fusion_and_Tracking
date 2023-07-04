@@ -28,27 +28,18 @@ class Track:
         print('creating track no.', id)
         M_rot = meas.sensor.sens_to_veh[0:3, 0:3] # rotation matrix from sensor to vehicle coordinates
         
-        ############
-        # TODO Step 2: initialization:
-        # - replace fixed track initialization values by initialization of x and P based on 
-        # unassigned measurement transformed from sensor to vehicle coordinates
-        # - initialize track state and track score with appropriate values
-        ############
-
-        self.x = np.matrix([[49.53980697],
-                        [ 3.41006279],
-                        [ 0.91790581],
-                        [ 0.        ],
-                        [ 0.        ],
-                        [ 0.        ]])
-        self.P = np.matrix([[9.0e-02, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00],
-                        [0.0e+00, 9.0e-02, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00],
-                        [0.0e+00, 0.0e+00, 6.4e-03, 0.0e+00, 0.0e+00, 0.0e+00],
-                        [0.0e+00, 0.0e+00, 0.0e+00, 2.5e+03, 0.0e+00, 0.0e+00],
-                        [0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 2.5e+03, 0.0e+00],
-                        [0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 2.5e+01]])
-        self.state = 'confirmed'
-        self.score = 0
+        pos_veh = M_rot * meas.z[0:3]
+        
+        self.x = np.zeros((params.dim_state,1))
+        self.x[0:3] = pos_veh[0:3]
+        
+        P_pos = M_rot * meas.R * M_rot.T
+        P_vel = np.diag([params.sigma_p44 ** 2, params.sigma_p55 ** 2, params.sigma_p66 ** 2])
+        self.P = np.zeros((6, 6))
+        self.P[0:3, 0:3] = P_pos
+        self.P[3:6, 3:6] = P_vel
+        self.state = 'initialized'
+        self.score = 1.0 / params.window
         
         ############
         # END student code
@@ -93,28 +84,24 @@ class Trackmanagement:
         self.result_list = []
         
     def manage_tracks(self, unassigned_tracks, unassigned_meas, meas_list):  
-        ############
-        # TODO Step 2: implement track management:
-        # - decrease the track score for unassigned tracks
-        # - delete tracks if the score is too low or P is too big (check params.py for parameters that might be helpful, but
-        # feel free to define your own parameters)
-        ############
-        
         # decrease score for unassigned tracks
         for i in unassigned_tracks:
             track = self.track_list[i]
             # check visibility    
             if meas_list: # if not empty
                 if meas_list[0].sensor.in_fov(track.x):
-                    # your code goes here
-                    pass 
+                    track.score -= 1.0 / params.window
+                    track.score = max(track.score, 0.0)
+                    
+        for track in self.track_list:
+            delete_track = False
+            if (track.P.diagonal()[:2] > params.max_P).any() or track.score < 0.1:
+                delete_track = True
+            if track.state == "confirmed" and track.score < params.delete_threshold:
+                delete_track = True
+            if delete_track:
+                self.delete_track(track)
 
-        # delete old tracks   
-
-        ############
-        # END student code
-        ############ 
-            
         # initialize new track with unassigned measurement
         for j in unassigned_meas: 
             if meas_list[j].sensor.name == 'lidar': # only initialize with lidar measurements
@@ -134,14 +121,8 @@ class Trackmanagement:
         self.track_list.remove(track)
         
     def handle_updated_track(self, track):      
-        ############
-        # TODO Step 2: implement track management for updated tracks:
-        # - increase track score
-        # - set track state to 'tentative' or 'confirmed'
-        ############
-
-        pass
-        
-        ############
-        # END student code
-        ############ 
+        track.score += 1.0 / params.window
+        if track.score >= params.confirmed_threshold:
+            track.state = "confirmed"
+        else:
+            track.state = "tentative"
